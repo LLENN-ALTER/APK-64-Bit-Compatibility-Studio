@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APK 64-Bit Compatibility Studio - Standalone Edition</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip for Client-side ZIP decoding -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0c0f16;
+            color: #e2e8f0;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased relative selection:bg-indigo-600 selection:text-white">
+    <!-- Background visual accents -->
+    <div class="absolute top-0 left-1/4 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] bg-fuchsia-500/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+    <!-- Header Section -->
+    <header class="border-b border-slate-805/60 bg-[#0c0f16]/90 backdrop-blur-xl sticky top-0 z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl shadow-lg shadow-indigo-500/20 ring-1 ring-white/10">
+                    <!-- Embedded SVG logo icon -->
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl md:text-2xl font-display font-bold tracking-tight text-white">APK 64-Bit Compatibility Studio</h1>
+                        <span class="px-2 py-0.5 text-[9px] font-mono font-bold tracking-widest bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 rounded">GITHUB PAGES READY</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5">Generatore autonomo di Script di Iniezione wrap.sh per Termux • Gira 100% nel Browser</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 self-start md:self-auto bg-slate-900/60 p-1 border border-slate-800/80 rounded-lg">
+                <span class="px-2.5 py-1 text-xs font-mono font-medium text-slate-400">Target:</span>
+                <span class="px-2 py-0.5 text-xs font-medium bg-indigo-500/10 text-indigo-400 rounded border border-indigo-500/20">Android 12/13/14+</span>
+                <span class="px-2 py-0.5 text-xs font-medium bg-neutral-800 text-slate-300 rounded border border-neutral-700/50">ARM64</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 relative z-10">
+        
+        <!-- Left Sidebar: APK Reader & ABI Visualizer -->
+        <div class="w-full lg:w-[360px] shrink-0 flex flex-col gap-6">
+            
+            <!-- Upload Box -->
+            <div class="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-800/80 p-5 flex flex-col">
+                <h3 class="text-sm font-semibold tracking-wide text-indigo-350 uppercase mb-3 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    1. Analizzatore APK Locale
+                </h3>
+                
+                <div id="drop-zone" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-[#0f141f] rounded-xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 group select-none min-h-[170px]">
+                    <input type="file" id="file-input" accept=".apk,.zip" class="hidden">
+                    
+                    <div id="upload-state-idle" class="flex flex-col items-center">
+                        <div class="p-3 bg-slate-800/40 rounded-full mb-3 group-hover:bg-indigo-500/10 transition-all">
+                            <svg class="w-8 h-8 text-slate-400 group-hover:text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                        </div>
+                        <p class="text-sm font-semibold text-slate-300">Trascina APK qui</p>
+                        <p class="text-xs text-slate-500 mt-1">oppure clicca per sfogliare</p>
+                    </div>
+
+                    <div id="upload-state-loading" class="hidden flex flex-col items-center gap-3">
+                        <svg class="w-8 h-8 text-indigo-400 animate-spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                        <p class="text-sm font-medium text-slate-300">Scansione librerie in corso...</p>
+                    </div>
+
+                    <div id="upload-state-loaded" class="hidden flex flex-col items-center text-center">
+                        <div class="p-3 bg-indigo-500/10 rounded-full mb-3">
+                            <svg class="w-8 h-8 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <p id="apk-info-name" class="text-sm font-semibold text-slate-200 line-clamp-1 max-w-[240px]"></p>
+                        <p id="apk-info-size" class="text-xs text-slate-400 mt-1"></p>
+                        <button id="btn-clear-apk" class="mt-4 px-3 py-1 bg-red-400/10 hover:bg-red-400/20 text-red-400 text-xs font-semibold rounded-lg border border-red-500/20 transition-all flex items-center gap-1.5 mx-auto">
+                            Rimuovi File
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="error-box" class="hidden mt-4 p-3 bg-red-500/15 border border-red-500/20 rounded-xl text-xs text-red-300 flex items-start gap-2.5">
+                    <svg class="w-4 h-4 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <p id="error-message"></p>
+                </div>
+            </div>
+
+            <!-- ABI Report Status -->
+            <div class="bg-slate-900/40 backdrop-blur-md rounded-2xl border border-slate-800/80 p-5 flex flex-col">
+                <h3 class="text-sm font-semibold tracking-wide text-indigo-350 uppercase mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    Stato Architetture ABI
+                </h3>
+
+                <div id="abi-report-empty" class="flex flex-col items-center justify-center py-6 text-center text-slate-500">
+                    <svg class="w-10 h-10 text-slate-700 mb-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                    <p class="text-xs">Nessun file APK letto.</p>
+                    <p class="text-[11px] text-slate-650 mt-1 max-w-[210px]">Trascina un file sopra per analizzare le librerie native .so contenute.</p>
+                </div>
+
+                <div id="abi-report-content" class="hidden space-y-4">
+                    <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800/50">
+                        <div class="text-xs text-slate-400 font-medium">Compatibilità Rilevata</div>
+                        <div id="abi-tech-tag" class="flex items-center gap-2 font-semibold mt-1.5 text-sm"></div>
+                        <div id="abi-tech-description" class="text-[11px] text-slate-500 mt-2 leading-relaxed"></div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Librerie Condivise Rilevate (.so)</div>
+                        <div id="abi-list-container" class="space-y-2 max-h-[250px] overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Sandbox Summary -->
+            <div class="bg-indigo-500/5 rounded-2xl border border-indigo-500/10 p-5">
+                <h4 class="text-xs font-bold tracking-widest text-indigo-450 uppercase flex items-center gap-1.5 mb-3">
+                    <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Parametri di Sicurezza
+                </h4>
+                <div class="space-y-2.5 font-mono text-[11px] text-slate-400">
+                    <div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+                        <span>DEBUGGABLE TARGET:</span>
+                        <span class="text-amber-400 font-semibold">ATTIVO (true)</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-800/80 pb-1.5">
+                        <span>REDIRECT METHOD:</span>
+                        <span class="text-emerald-400 font-semibold">wrap.sh chmod 0755</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>ZIPALIGN ALIGNMENT:</span>
+                        <span id="label-align-bytes" class="text-indigo-400 font-semibold">4-BYTE</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Side: Configuration Form & Live Code Panel -->
+        <div class="flex-1 flex flex-col bg-slate-900/35 rounded-3xl border border-slate-800/80 overflow-hidden backdrop-blur-md">
+            
+            <!-- Navbar tabs inside standalone view -->
+            <div class="flex border-b border-slate-800 bg-[#0f141f]">
+                <button onclick="switchTab('tab-panel-config')" id="tab-btn-config" class="px-5 py-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-indigo-500 text-indigo-400 bg-slate-900/40 flex items-center gap-2 whitespace-nowrap">
+                    Configurazione Parametri
+                </button>
+                <button onclick="switchTab('tab-panel-script')" id="tab-btn-script" class="px-5 py-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+                    Script Python Termux
+                </button>
+                <button onclick="switchTab('tab-panel-guide')" id="tab-btn-guide" class="px-5 py-4 text-xs font-semibold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+                    Guida Installazione
+                </button>
+            </div>
+
+            <!-- Tab Contents Container -->
+            <div class="p-6 flex-1 flex flex-col justify-between">
+                
+                <!-- TAB 1: Configurations FORM -->
+                <div id="tab-panel-config" class="space-y-6">
+                    <div class="flex items-center gap-2 border-b border-slate-800 pb-4">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        <div>
+                            <h2 class="text-base font-semibold text-white">Configura lo Script Android Patcher</h2>
+                            <p class="text-xs text-slate-450 mt-0.5">Modifica i parametri per cambiare in tempo reale le variabili nel codice Python generato.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Left Subcolumn -->
+                        <div class="space-y-5">
+                            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 border-l-2 border-indigo-500 pl-2">
+                                Regole di Compilazione Manifest & Architettura
+                            </h3>
+
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-slate-300">Name identificativo (Package Guess):</label>
+                                <input type="text" id="config-package" value="com.patched.game" class="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 transition-all">
+                            </div>
+
+                            <div class="flex items-center justify-between p-3.5 bg-slate-950/60 rounded-xl border border-slate-800/80">
+                                <div class="max-w-[220px]">
+                                    <label class="text-xs font-semibold text-slate-200 block">android:debuggable="true"</label>
+                                    <span class="text-[10px] text-slate-450 block leading-tight">Inietta l'attributo debuggable nel Manifesto. Obbligatorio per eseguire wrap.sh senza root.</span>
+                                </div>
+                                <input type="checkbox" id="config-debuggable" checked class="w-4.5 h-4.5 text-indigo-600 bg-slate-900 rounded accent-indigo-500 cursor-pointer">
+                            </div>
+
+                            <div class="flex items-center justify-between p-3.5 bg-slate-950/60 rounded-xl border border-slate-800/80">
+                                <div class="max-w-[220px]">
+                                    <label class="text-xs font-semibold text-slate-200 block">Pulisci vecchie firme META-INF</label>
+                                    <span class="text-[10px] text-slate-450 block leading-tight">Cancella selettivamente i file crittografici RSA/SF per evitare collisioni di installazione.</span>
+                                </div>
+                                <input type="checkbox" id="config-clean-meta" checked class="w-4.5 h-4.5 text-indigo-600 bg-slate-900 rounded accent-indigo-500 cursor-pointer">
+                            </div>
+
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-slate-300">ZipAlign Byte Alignment:</label>
+                                <select id="config-align" onchange="document.getElementById('label-align-bytes').innerText = this.value + '-BYTE'; updateScriptOutput();" class="px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 transition-all cursor-pointer">
+                                    <option value="4">4-Byte Alignment (Metodo Standard consigliato)</option>
+                                    <option value="8">8-Byte Alignment (Ottimizzazione diretta zero-copy)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Right Subcolumn -->
+                        <div class="space-y-5">
+                            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 border-l-2 border-indigo-500 pl-2">
+                                Iniezione wrap.sh / Translation Engine
+                            </h3>
+
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-slate-300">Framework di Traduzione Layer:</label>
+                                <select id="config-engine" onchange="toggleEngineCustomBox(); updateScriptOutput();" class="px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-all cursor-pointer">
+                                    <option value="tango">Tango translation engine (wrap.sh automatico)</option>
+                                    <option value="custom">Usa modulo personalizzato wrap.sh (Bash)</option>
+                                    <option value="none">Redirect Generico di Redirezione standard</option>
+                                </select>
+                            </div>
+
+                            <div id="custom-wrap-container" class="hidden flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-slate-300">Codice wrap.sh bash personalizzato:</label>
+                                <textarea id="config-custom-wrap" rows="4" class="px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 transition-all resize-none">#!/system/bin/sh
+DIR="$(dirname "$0")"
+export LD_LIBRARY_PATH="$DIR:$LD_LIBRARY_PATH"
+exec "$@"</textarea>
+                            </div>
+
+                            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5 border-l-2 border-indigo-500 pl-2 pt-2">
+                                Sistema Chiavi apksigner / Java Keystore
+                            </h3>
+
+                            <div class="flex items-center justify-between p-3.5 bg-slate-950/60 rounded-xl border border-slate-800/80">
+                                <div class="max-w-[220px]">
+                                    <label class="text-xs font-semibold text-slate-200 block">Genera Firma debug al volo</label>
+                                    <span class="text-[10px] text-slate-450 block leading-tight">Usa Java keytool nel sandbox per preparare e applicare una crittografia temporanea.</span>
+                                </div>
+                                <input type="checkbox" id="config-key-fly" checked class="w-4.5 h-4.5 text-indigo-600 bg-slate-900 rounded accent-indigo-500 cursor-pointer">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs font-semibold text-slate-350">Keystore Alias:</label>
+                                    <input type="text" id="config-key-alias" value="androiddebugkey" class="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 transition-all">
+                                </div>
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="text-xs font-semibold text-slate-350">Password certificato:</label>
+                                    <input type="password" id="config-key-pass" value="android" class="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-slate-300 focus:outline-none focus:border-indigo-500 transition-all">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirm notification card -->
+                    <div class="border border-indigo-500/10 rounded-2xl bg-indigo-500/5 p-4 flex items-center justify-between gap-4 mt-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-indigo-500/10 rounded-lg border border-indigo-500/20 text-indigo-400 shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </div>
+                            <div>
+                                <div class="text-xs font-bold text-slate-200">Ottimo! Configurazione sincronizzata</div>
+                                <p class="text-[11px] text-slate-450">I parametri indicati sopra sono stati compilati direttamente all'interno delle costanti dello script.</p>
+                            </div>
+                        </div>
+                        <button onclick="switchTab('tab-panel-script')" class="whitespace-nowrap px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-lg shadow-indigo-600/10 transition-all flex items-center gap-1 group">
+                            Vedi Script Patcher 
+                            <svg class="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+
+                <!-- TAB 2: Generated PYTHON SCRIPT -->
+                <div id="tab-panel-script" class="hidden space-y-4 flex-1 flex flex-col">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 shrink-0">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 18L22 12L16 6"/><path d="M8 6L2 12L8 18"/></svg>
+                            <div>
+                                <h2 class="text-base font-semibold text-white">Script Python Autonomo</h2>
+                                <p class="text-xs text-slate-400 mt-0.5">Usa questo codice in Termux sul tuo cellulare Android per eseguire l'intera procedura automatica.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="copyScriptCode()" class="px-3.5 py-1.5 bg-slate-950 hover:bg-slate-900 text-slate-300 text-xs font-semibold rounded-lg border border-slate-800/80 transition-all flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                <span id="btn-copy-text">Copia Codice</span>
+                            </button>
+
+                            <button onclick="downloadScriptFile()" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-lg shadow-indigo-600/10 transition-all flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                                Scarica .py
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative flex-1 bg-slate-950 rounded-xl border border-slate-850 flex flex-col overflow-hidden min-h-[350px]">
+                        <!-- Mock coding editor header -->
+                        <div class="bg-indigo-950/20 px-4 py-2 border-b border-slate-900 flex items-center justify-between text-[11px] font-mono text-slate-450">
+                            <span>termux_patcher_64bit.py</span>
+                            <span class="text-xs text-emerald-450 font-bold">Python 3 • Pronto all'uso</span>
+                        </div>
+                        
+                        <!-- High performance text editor -->
+                        <textarea id="python-code-box" readonly class="p-4 bg-slate-950 font-mono text-xs text-slate-350 leading-relaxed overflow-auto flex-1 focus:outline-none resize-none select-all"></textarea>
+                    </div>
+                </div>
+
+
+                <!-- TAB 3: Dynamic Installation Manual inside Termux on Android -->
+                <div id="tab-panel-guide" class="hidden space-y-6">
+                    <div class="flex items-center gap-2 border-b border-slate-800 pb-4">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        <div>
+                            <h2 class="text-base font-semibold text-white">Termux Android Manuale Operativo</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">Segui questi semplici comandi per installare l'ambiente di Reverse Engineering ed eseguire il patching.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        
+                        <!-- Step 1 -->
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                                <span class="w-5 h-5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center font-mono font-bold text-[10px]">1</span>
+                                1. Aggiorna e Installa i Tool di Compilazione di Termux
+                            </h3>
+                            <p class="text-xs text-slate-450 leading-relaxed pl-7">
+                                Apri Termux sul tuo terminale Android ed effettua il download dei tool essenziali (apktool, Java keytool, apksigner e zipalign):
+                            </p>
+                            <div class="pl-7">
+                                <div class="bg-slate-950 p-3 rounded-xl border border-slate-850 font-mono text-xs text-slate-300 flex items-center justify-between gap-4">
+                                    <code class="line-clamp-1">pkg update -y && pkg install x11-repo -y && pkg install openjdk-17 python apksigner zipalign apktool -y</code>
+                                    <button onclick="copyStringToClipboard('pkg update -y && pkg install x11-repo -y && pkg install openjdk-17 python apksigner zipalign apktool -y')" class="px-2.5 py-1 text-[10px] bg-slate-900 border border-slate-800 rounded text-slate-400 hover:text-slate-200 transition-all shrink-0">Copia</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2 -->
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                                <span class="w-5 h-5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center font-mono font-bold text-[10px]">2</span>
+                                2. Attiva l'accesso alla memoria microSD/Memoria Interna
+                            </h3>
+                            <p class="text-xs text-slate-450 leading-relaxed pl-7">
+                                Concedi i permessi a Termux per spostare ed elaborare file esterni dalla tua cartella dei download ordinaria:
+                            </p>
+                            <div class="pl-7">
+                                <div class="bg-slate-950 p-3 rounded-xl border border-slate-850 font-mono text-xs text-slate-300 flex items-center justify-between gap-4">
+                                    <code>termux-setup-storage</code>
+                                    <button onclick="copyStringToClipboard('termux-setup-storage')" class="px-2.5 py-1 text-[10px] bg-slate-900 border border-slate-800 rounded text-slate-400 hover:text-slate-200 transition-all shrink-0">Copia</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                                <span class="w-5 h-5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center font-mono font-bold text-[10px]">3</span>
+                                3. Copia l'APK e lancia lo Script
+                            </h3>
+                            <p class="text-xs text-slate-450 leading-relaxed pl-7">
+                                Posiziona il file python generato del patcher nella stessa cartella dell'APK e lancialo con questo comando:
+                            </p>
+                            <div class="pl-7">
+                                <div class="bg-slate-950 p-3.5 border border-slate-850 rounded-xl space-y-2 font-mono text-xs text-slate-350">
+                                    <div class="text-slate-500"># Accedi alla memoria dei Download standard di Android</div>
+                                    <div class="flex items-center justify-between">
+                                        <code>cd ~/storage/shared/Download</code>
+                                        <button onclick="copyStringToClipboard('cd ~/storage/shared/Download')" class="px-2 py-0.5 text-[9px] bg-slate-900 border border-slate-800 rounded text-slate-400">Copia</button>
+                                    </div>
+                                    <div class="text-slate-500"># Esegui lo script indicando il file 32-bit originale</div>
+                                    <div class="flex items-center justify-between">
+                                        <code>python3 termux_patcher_64bit.py gioco_originale.apk</code>
+                                        <button onclick="copyStringToClipboard('python3 termux_patcher_64bit.py gioco_originale.apk')" class="px-2 py-0.5 text-[9px] bg-slate-900 border border-slate-800 rounded text-slate-400">Copia</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="space-y-2">
+                            <h3 class="text-xs font-bold text-slate-300 flex items-center gap-2">
+                                <span class="w-5 h-5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full flex items-center justify-center font-mono font-bold text-[10px]">4</span>
+                                4. Architettura del Translation Layer
+                            </h3>
+                            <p class="text-xs text-slate-450 leading-relaxed pl-7">
+                                Lo script imposta i permessi di esecuzione resilienti <code>0o755</code> su <code>wrap.sh</code>. Ricordati che l'emulatore binario (es. <code>Tango</code>) deve essere gia registrato e presente nel percorso globale di installazione del dispositivo Android (<code>/data/local/tmp/tango/tango_translator</code>) per interpretare dinamicamente le chiamate ARM 32-bit.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer container -->
+    <footer class="border-t border-slate-900 bg-slate-950/70 p-4 shrink-0 text-center text-xs text-slate-500 font-mono">
+        <div>APK 64-Bit Compatibility Studio © 2026 • Realizzato per l'integrazione di motori Android RE</div>
+    </footer>
+
+    <!-- Logic Engine Script -->
+    <script>
+        // Store current config state
+        const config = {
+            packageName: 'com.patched.game',
+            debuggable: true,
+            cleanMetaInf: true,
+            alignBytes: 4,
+            translationEngine: 'tango',
+            customWrapSh: `#!/system/bin/sh\nDIR="$(dirname "$0")"\nexport LD_LIBRARY_PATH="$DIR:$LD_LIBRARY_PATH"\nexec "$@"`,
+            generateKeyOnFly: true,
+            keystoreAlias: 'androiddebugkey',
+            keystorePass: 'android'
+        };
+
+        // Form listeners
+        document.getElementById('config-package').addEventListener('input', (e) => {
+            config.packageName = e.target.value;
+            updateScriptOutput();
+        });
+        document.getElementById('config-debuggable').addEventListener('change', (e) => {
+            config.debuggable = e.target.checked;
+            updateScriptOutput();
+        });
+        document.getElementById('config-clean-meta').addEventListener('change', (e) => {
+            config.cleanMetaInf = e.target.checked;
+            updateScriptOutput();
+        });
+        document.getElementById('config-align').addEventListener('change', (e) => {
+            config.alignBytes = parseInt(e.target.value);
+            updateScriptOutput();
+        });
+        document.getElementById('config-engine').addEventListener('change', (e) => {
+            config.translationEngine = e.target.value;
+            updateScriptOutput();
+        });
+        document.getElementById('config-custom-wrap').addEventListener('input', (e) => {
+            config.customWrapSh = e.target.value;
+            updateScriptOutput();
+        });
+        document.getElementById('config-key-fly').addEventListener('change', (e) => {
+            config.generateKeyOnFly = e.target.checked;
+            updateScriptOutput();
+        });
+        document.getElementById('config-key-alias').addEventListener('input', (e) => {
+            config.keystoreAlias = e.target.value;
+            updateScriptOutput();
+        });
+        document.getElementById('config-key-pass').addEventListener('input', (e) => {
+            config.keystorePass = e.target.value;
+            updateScriptOutput();
+        });
+
+        // Toggle custom wrap content textarea box
+        function toggleEngineCustomBox() {
+            const selectVal = document.getElementById('config-engine').value;
+            const container = document.getElementById('custom-wrap-container');
+            if (selectVal === 'custom') {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        // Script Switch panels
+        const tabs = ['tab-panel-config', 'tab-panel-script', 'tab-panel-guide'];
+        function switchTab(activeId) {
+            tabs.forEach(id => {
+                const element = document.getElementById(id);
+                const btn = document.getElementById(id.replace('panel', 'btn'));
+                if (id === activeId) {
+                    element.classList.remove('hidden');
+                    btn.classList.add('border-indigo-500', 'text-indigo-400', 'bg-slate-900/40');
+                    btn.classList.remove('border-transparent', 'text-slate-400');
+                } else {
+                    element.classList.add('hidden');
+                    btn.classList.remove('border-indigo-500', 'text-indigo-400', 'bg-slate-900/40');
+                    btn.classList.add('border-transparent', 'text-slate-400');
+                }
+            });
+        }
+
+        // Generate full Python Code built directly from configurations
+        function buildPythonScript() {
+            let wrapShContent = '';
+            if (config.translationEngine === 'tango') {
+                wrapShContent = `#!/system/bin/sh\\n# Tango translation layer injection wrapper\\nDIR=\\"\\$(cd \\"\\$(dirname \\"\\$0\\")\\" && pwd)\\"\\nAPP_PROCESS_NAME=\\"\\\\$1\\"\\n\\necho \\"[Tango-Wrapper] Intercepting process start with wrap.sh\\"\\n\\nexport TANGO_ROOT=\\"/data/local/tmp/tango\\"\\nexport LD_LIBRARY_PATH=\\"\\$DIR:\\\\$LD_LIBRARY_PATH\\"\\n\\nif [ -f \\"\\$TANGO_ROOT/tango_translator\\" ]; then\\n    exec \\"\\$TANGO_ROOT/tango_translator\\" \\"\\\\$@\\"\\nelse\\n    exec \\"\\\\$@\\"\\nfi`;
+            } else if (config.translationEngine === 'custom') {
+                wrapShContent = config.customWrapSh.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+            } else {
+                wrapShContent = `#!/system/bin/sh\\nDIR=\\"\\$(dirname \\"\\$0\\")\\"\\nexport LD_LIBRARY_PATH=\\"\\$DIR:\\\\$LD_LIBRARY_PATH\\"\\nexec \\"\\\\$@\\"`;
+            }
+
+            return `#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+================================================================================
+          ANDROID 32-BIT TO 64-BIT COMPATIBILITY PATCHER (TERMUX OPTIMIZED)
+================================================================================
+Author: Termux & Android RE Specialist
+Description:
+   Automatizes the modification of an armeabi-v7a (32-bit) APK to become compatible
+   with 64-bit-only Android architectures using the wrap.sh method and injecting
+   a translation framework integration structure. Fits Android 12, 13, and 14 requirements.
+================================================================================
+"""
+
+import os
+import sys
+import shutil
+import subprocess
+import xml.etree.ElementTree as ET
+import glob
+import tempfile
+
+class Colors:
+    HEADER = '\\033[95m'
+    BLUE = '\\033[94m'
+    GREEN = '\\033[92m'
+    YELLOW = '\\033[93m'
+    RED = '\\033[91m'
+    RESET = '\\033[0m'
+    BOLD = '\\033[1m'
+
+def log_info(msg): print(f"{Colors.BLUE}[*] {msg}{Colors.RESET}")
+def log_success(msg): print(f"{Colors.GREEN}[+] SUCCESS: {msg}{Colors.RESET}")
+def log_warn(msg): print(f"{Colors.YELLOW}[!] WARNING: {msg}{Colors.RESET}")
+def log_error(msg): print(f"{Colors.RED}[-] ERROR: {msg}{Colors.RESET}", file=sys.stderr)
+
+def check_dependencies():
+    log_info("Checking and verifying environment dependencies...")
+    dependencies = ["apktool", "java", "zipalign", "apksigner"]
+    missing = []
+    for tool in dependencies:
+        cmd = [tool, "-version"] if tool != "java" else ["java", "-version"]
+        try:
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except FileNotFoundError:
+            missing.append(tool)
+    if missing:
+        log_error(f"Missing required utilities in this system: {', '.join(missing)}")
+        print("\\n" + Colors.BOLD + "=== HOW TO FIX IN TERMUX ===" + Colors.RESET)
+        print("Run the following commands in the terminal to set up the toolchain:")
+        print(f"{Colors.GREEN}pkg update && pkg upgrade -y")
+        print(f"pkg install x11-repo -y  # Required for apktool")
+        print(f"pkg install openjdk-17 python apksigner zipalign apktool -y{Colors.RESET}")
+        print("===============================\\n")
+        sys.exit(1)
+    else:
+        log_success("All system dependencies verified. (apktool, openjdk, zipalign, apksigner)")
+
+def find_application_tag(manifest_path):
+    ET.register_namespace('android', 'http://schemas.android.com/apk/res/android')
+    try:
+        tree = ET.parse(manifest_path)
+        root = tree.getroot()
+        application = root.find('application')
+        return tree, root, application
+    except Exception as e:
+        log_error(f"Failed to parse XML Manifest: {e}")
+        return None, None, None
+
+def patch_manifest(decompiled_dir):
+    manifest_path = os.path.join(decompiled_dir, "AndroidManifest.xml")
+    if not os.path.exists(manifest_path):
+        log_error(f"AndroidManifest.xml not found!")
+        return False
+    log_info("Parsing AndroidManifest.xml...")
+    tree, root, application = find_application_tag(manifest_path)
+    if application is None:
+        log_error("Could not find <application> tag")
+        return False
+    android_ns = "{http://schemas.android.com/apk/res/android}"
+    debuggable_attr = f"{android_ns}debuggable"
+    application.set(debuggable_attr, "true")
+    log_success("Injected/Updated: android:debuggable=\\"true\\" inside Manifest")
+    try:
+        tree.write(manifest_path, encoding='utf-8', xml_declaration=True)
+        return True
+    except Exception as e:
+        log_error(f"Failed writing improvements to AndroidManifest.xml: {e}")
+        return False
+
+def clean_signatures(decompiled_dir):
+    log_info("Cleaning up previous cryptographical signatures and certificates...")
+    meta_inf_dirs = [os.path.join(decompiled_dir, "META-INF")]
+    cleaned_count = 0
+    for meta_dir in meta_inf_dirs:
+        if os.path.exists(meta_dir):
+            for pattern in ['*.RSA', '*.SF', '*.DSA', '*.EC', 'MANIFEST.MF']:
+                files = glob.glob(os.path.join(meta_dir, pattern))
+                for file_path in files:
+                    try:
+                        os.remove(file_path)
+                        cleaned_count += 1
+                    except Exception as e:
+                        log_warn(f"Failed deleting signature file {file_path}: {e}")
+    if cleaned_count > 0:
+        log_success(f"Purged {cleaned_count} former signatures from META-INF.")
+
+def inject_translation_wrapper(decompiled_dir):
+    lib_dir = os.path.join(decompiled_dir, "lib")
+    arm64_dir = os.path.join(lib_dir, "arm64-v8a")
+    os.makedirs(arm64_dir, exist_ok=True)
+    wrap_script_path = os.path.join(arm64_dir, "wrap.sh")
+    log_info("Writing wrap.sh to intercept library execution...")
+    wrap_sh_content = "${wrapShContent}"
+    try:
+        with open(wrap_script_path, "w", encoding="utf-8") as f:
+            f.write(wrap_sh_content.replace("\\\\n", "\\n").replace("\\\\t", "\\t"))
+        os.chmod(wrap_script_path, 0o755)
+        log_success("wrap.sh written & executable permissions granted (0755 / rwxr-xr-x)")
+        return True
+    except Exception as e:
+        log_error(f"Failed to inject wrap.sh script: {e}")
+        return False
+
+def generate_debug_keystore(keystore_path, alias, password):
+    log_info(f"Generating dynamic debug self-signed keystore...")
+    cmd = [
+        "keytool", "-genkey", "-v",
+        "-keystore", keystore_path,
+        "-alias", alias,
+        "-storepass", password,
+        "-keypass", password,
+        "-keyalg", "RSA",
+        "-keysize", "2048",
+        "-validity", "10000",
+        "-dname", "CN=Termux Transl Patcher Debug, OU=Android RE, O=Emulation Labs, C=IT"
+    ]
+    try:
+        res = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        if res.returncode != 0:
+            log_error(f"Keystore generation failed: {res.stderr}")
+            return False
+        log_success("Generated functional cryptographical pair debug.keystore successfully!")
+        return True
+    except Exception as e:
+        log_error(f"Failed calling keytool utility: {e}")
+        return False
+
+def patch_apk(input_apk, output_apk):
+    if not os.path.exists(input_apk):
+        log_error(f"Input file not found at: {input_apk}")
+        sys.exit(1)
+    temp_work_dir = tempfile.mkdtemp(prefix="apk_patcher_")
+    decompiled_dir = os.path.join(temp_work_dir, "decompiled_app")
+    unsigned_apk = os.path.join(temp_work_dir, "unsigned.apk")
+    aligned_apk = os.path.join(temp_work_dir, "aligned.apk")
+    
+    try:
+        log_info(f"Decompiling input APK: {input_apk} using apktool...")
+        subprocess.run(["apktool", "d", "-f", "-o", decompiled_dir, input_apk], check=True)
+        
+        if not patch_manifest(decompiled_dir): sys.exit(1)
+        if not inject_translation_wrapper(decompiled_dir): sys.exit(1)
+        if ${config.cleanMetaInf ? "True" : "False"}: clean_signatures(decompiled_dir)
+        
+        log_info("Rebuilding patched app using apktool b...")
+        subprocess.run(["apktool", "b", "-o", unsigned_apk, decompiled_dir], check=True)
+        
+        log_info("Aligning structures utilizing ${config.alignBytes}-byte boundaries (zipalign)...")
+        subprocess.run(["zipalign", "-f", "-v", "${config.alignBytes}", unsigned_apk, aligned_apk], stdout=subprocess.DEVNULL, check=True)
+        
+        keystore_path = os.path.join(temp_work_dir, "debug.keystore")
+        alias = "${config.keystoreAlias}"
+        password = "${config.keystorePass}"
+        
+        if ${config.generateKeyOnFly ? "True" : "False"}:
+            if not generate_debug_keystore(keystore_path, alias, password): sys.exit(1)
+            
+        log_info("Signing final APK with apksigner...")
+        sign_cmd = ["apksigner", "sign", "--keystore", keystore_path, "--storepass", password, "--ks-key-alias", alias, "--keypass", password, "--out", output_apk, aligned_apk]
+        subprocess.run(sign_cmd, check=True)
+        
+        log_success("PATCHING COMPLETELY FINISHED!")
+        print(f"\\n -> Patch file saved securely to: {os.path.abspath(output_apk)}\\n")
+    finally:
+        shutil.rmtree(temp_work_dir, ignore_errors=True)
+
+if __name__ == "__main__":
+    check_dependencies()
+    if len(sys.argv) < 2:
+        input_apk = input("Enter path to 32-bit input APK: ").strip()
+        if not input_apk: sys.exit(1)
+        output_apk = input_apk.replace(".apk", "_patched_64bit.apk")
+    else:
+        input_apk = sys.argv[1]
+        output_apk = sys.argv[2] if len(sys.argv) >= 3 else input_apk.replace(".apk", "_patched_64bit.apk")
+    patch_apk(input_apk, output_apk)
+`;
+        }
+
+        // Render Python Text Box contents in real-time
+        function updateScriptOutput() {
+            const output = buildPythonScript();
+            document.getElementById('python-code-box').value = output;
+        }
+
+        // Action: Copy to clipboard
+        function copyScriptCode() {
+            const code = document.getElementById('python-code-box').value;
+            copyStringToClipboard(code);
+            const btnText = document.getElementById('btn-copy-text');
+            btnText.innerText = "Copiato!";
+            setTimeout(() => { btnText.innerText = "Copia Codice" }, 2000);
+        }
+
+        function copyStringToClipboard(str) {
+            navigator.clipboard.writeText(str);
+        }
+
+        // Action: Save as downloaded python script file
+        function downloadScriptFile() {
+            const text = document.getElementById('python-code-box').value;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'termux_patcher_64bit.py';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // Live APK Zip Client-Side Unpacker State
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-500/5') });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-indigo-500', 'bg-indigo-500/5'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-indigo-500', 'bg-indigo-500/5');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) processApkFile(files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) processApkFile(e.target.files[0]);
+        });
+
+        // Safe Client-Side Parsing Method
+        async function processApkFile(file) {
+            if (!file.name.endsWith('.apk') && !file.name.endsWith('.zip')) {
+                showError("The uploaded file does not look like a valid .apk or zip binary package.");
+                return;
+            }
+
+            hideError();
+            setUploadState('loading');
+
+            try {
+                const zip = new JSZip();
+                const loadedZip = await zip.loadAsync(file);
+                
+                let list32 = [];
+                let list64 = [];
+                let hasManifest = false;
+
+                Object.keys(loadedZip.files).forEach(filePath => {
+                    if (filePath.toLowerCase().endsWith('androidmanifest.xml')) {
+                        hasManifest = true;
+                    }
+                    if (filePath.startsWith('lib/')) {
+                        const parts = filePath.split('/');
+                        if (parts.length > 2) {
+                            const arch = parts[1];
+                            const libName = parts.slice(2).join('/');
+                            if (libName.endsWith('.so')) {
+                                if (arch === 'armeabi-v7a' || arch === 'armeabi') list32.push(libName);
+                                if (arch === 'arm64-v8a') list64.push(libName);
+                            }
+                        }
+                    }
+                });
+
+                // Guess clean package name from name
+                const guessName = file.name.replace('.apk', '').replace(/[^a-zA-Z0-9]/g, '.').toLowerCase();
+                if (guessName.length > 4) {
+                    config.packageName = `com.patched.${guessName}`;
+                    document.getElementById('config-package').value = config.packageName;
+                    updateScriptOutput();
+                }
+
+                // Show Report
+                document.getElementById('apk-info-name').innerText = file.name;
+                document.getElementById('apk-info-size').innerText = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+                
+                const reportContent = document.getElementById('abi-report-content');
+                const emptyReport = document.getElementById('abi-report-empty');
+                const abiTechTag = document.getElementById('abi-tech-tag');
+                const abiTechDesc = document.getElementById('abi-tech-description');
+                const abiListContainer = document.getElementById('abi-list-container');
+
+                emptyReport.classList.add('hidden');
+                reportContent.classList.remove('hidden');
+                abiListContainer.innerHTML = '';
+
+                const has32 = list32.length > 0;
+                const has64 = list64.length > 0;
+
+                if (has32 && !has64) {
+                    abiTechTag.className = "flex items-center gap-2 font-semibold mt-1.5 text-sm text-red-400";
+                    abiTechTag.innerHTML = `<span>⚠️ Compatibile SOLO 32-bit (Critico)</span>`;
+                    abiTechDesc.innerText = "Questo APK causerà un crash immediato all'avvio sui telefoni moderni a 64-bit puri. Richiede assolutamente l'iniezione dello script wrap.sh!";
+                } else if (has32 && has64) {
+                    abiTechTag.className = "flex items-center gap-2 font-semibold mt-1.5 text-sm text-yellow-400";
+                    abiTechTag.innerHTML = `<span>⚡ Compatibilità Dual Arch (armeabi + arm64)</span>`;
+                    abiTechDesc.innerText = "L'APK contiene già il formato 64-bit ma potrebbe beneficiare dell'emulazione Tango o di moduli specifici in base alla firma.";
+                } else if (!has32 && has64) {
+                    abiTechTag.className = "flex items-center gap-2 font-semibold mt-1.5 text-sm text-emerald-400";
+                    abiTechTag.innerHTML = `<span>✓ Compatibile 64-bit Nativo</span>`;
+                    abiTechDesc.innerText = "Il pacchetto è gia nativo a 64-bit. Nessun intervento di traduzione arm64 richiesto.";
+                } else {
+                    abiTechTag.className = "flex items-center gap-2 font-semibold mt-1.5 text-sm text-slate-400";
+                    abiTechTag.innerHTML = `<span>☘ Nessuna libreria nativa .so</span>`;
+                    abiTechDesc.innerText = "Nessuna classe ELF binaria nativa. L'app è compilata interamente in Java/Kotlin nativo standard Android.";
+                }
+
+                // Render lists
+                if (list32.length > 0) {
+                    renderArchitecturesList('armeabi-v7a (32-bit CPU)', list32, 'bg-indigo-400', abiListContainer);
+                }
+                if (list64.length > 0) {
+                    renderArchitecturesList('arm64-v8a (64-bit Standard)', list64, 'bg-emerald-400', abiListContainer);
+                }
+
+                setUploadState('loaded');
+            } catch (err) {
+                console.error(err);
+                showError("Errore durante l'apertura del file APK compresso: " + err.message);
+                setUploadState('idle');
+            }
+        }
+
+        function renderArchitecturesList(title, files, dotColor, container) {
+            const listDiv = document.createElement('div');
+            listDiv.className = "bg-slate-950/40 p-2.5 rounded-lg border border-slate-800/45 flex flex-col gap-1.5";
+            
+            const fileSet = [...new Set(files)];
+            listDiv.innerHTML = `
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                    <span class="flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
+                        ${title}
+                    </span>
+                    <span class="text-slate-500">${fileSet.length} file</span>
+                </div>
+                <div class="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto pr-1">
+                    ${fileSet.map(f => `<span class="px-1.5 py-0.5 text-[9px] font-mono bg-slate-900 border border-slate-800 text-slate-400 rounded leading-none">${f.split('/').pop()}</span>`).join('')}
+                </div>
+            `;
+            container.appendChild(listDiv);
+        }
+
+        function setUploadState(state) {
+            document.getElementById('upload-state-idle').classList.add('hidden');
+            document.getElementById('upload-state-loading').classList.add('hidden');
+            document.getElementById('upload-state-loaded').classList.add('hidden');
+
+            if (state === 'idle') document.getElementById('upload-state-idle').classList.remove('hidden');
+            if (state === 'loading') document.getElementById('upload-state-loading').classList.remove('hidden');
+            if (state === 'loaded') document.getElementById('upload-state-loaded').classList.remove('hidden');
+        }
+
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            document.getElementById('error-message').innerText = msg;
+            box.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('error-box').classList.add('hidden');
+        }
+
+        document.getElementById('btn-clear-apk').addEventListener('click', (e) => {
+            e.stopPropagation();
+            setUploadState('idle');
+            document.getElementById('file-input').value = '';
+            document.getElementById('abi-report-empty').classList.remove('hidden');
+            document.getElementById('abi-report-content').classList.add('hidden');
+            hideError();
+        });
+
+        // Startup Initialization
+        toggleEngineCustomBox();
+        updateScriptOutput();
+    </script>
+</body>
+</html>
